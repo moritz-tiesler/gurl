@@ -1,6 +1,10 @@
--- name: GetUrl :one
+-- name: GetUrlById :one
 SELECT * FROM urls
 WHERE id = ? LIMIT 1;
+
+-- name: GetUrlByShortUrl :one
+SELECT * FROM urls
+WHERE short = ? LIMIT 1;
 
 -- name: ListUrls :many
 SELECT * FROM urls

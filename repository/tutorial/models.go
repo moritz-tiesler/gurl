@@ -6,6 +6,6 @@ package tutorial
 
 type Url struct {
 	ID       int64
-	Original string
 	Short    string
+	Original string
 }

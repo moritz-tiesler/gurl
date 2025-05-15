@@ -15,7 +15,7 @@ INSERT INTO urls (
 ) VALUES (
   ?, ?
 )
-RETURNING id, original, short
+RETURNING id, short, original
 `
 
 type CreateUrlParams struct {
@@ -26,7 +26,7 @@ type CreateUrlParams struct {
 func (q *Queries) CreateUrl(ctx context.Context, arg CreateUrlParams) (Url, error) {
 	row := q.db.QueryRowContext(ctx, createUrl, arg.Original, arg.Short)
 	var i Url
-	err := row.Scan(&i.ID, &i.Original, &i.Short)
+	err := row.Scan(&i.ID, &i.Short, &i.Original)
 	return i, err
 }
 
@@ -40,20 +40,32 @@ func (q *Queries) DeleteUrls(ctx context.Context, id int64) error {
 	return err
 }
 
-const getUrl = `-- name: GetUrl :one
-SELECT id, original, short FROM urls
+const getUrlById = `-- name: GetUrlById :one
+SELECT id, short, original FROM urls
 WHERE id = ? LIMIT 1
 `
 
-func (q *Queries) GetUrl(ctx context.Context, id int64) (Url, error) {
-	row := q.db.QueryRowContext(ctx, getUrl, id)
+func (q *Queries) GetUrlById(ctx context.Context, id int64) (Url, error) {
+	row := q.db.QueryRowContext(ctx, getUrlById, id)
 	var i Url
-	err := row.Scan(&i.ID, &i.Original, &i.Short)
+	err := row.Scan(&i.ID, &i.Short, &i.Original)
+	return i, err
+}
+
+const getUrlByShortUrl = `-- name: GetUrlByShortUrl :one
+SELECT id, short, original FROM urls
+WHERE short = ? LIMIT 1
+`
+
+func (q *Queries) GetUrlByShortUrl(ctx context.Context, short string) (Url, error) {
+	row := q.db.QueryRowContext(ctx, getUrlByShortUrl, short)
+	var i Url
+	err := row.Scan(&i.ID, &i.Short, &i.Original)
 	return i, err
 }
 
 const listUrls = `-- name: ListUrls :many
-SELECT id, original, short FROM urls
+SELECT id, short, original FROM urls
 ORDER BY original
 `
 
@@ -66,7 +78,7 @@ func (q *Queries) ListUrls(ctx context.Context) ([]Url, error) {
 	var items []Url
 	for rows.Next() {
 		var i Url
-		if err := rows.Scan(&i.ID, &i.Original, &i.Short); err != nil {
+		if err := rows.Scan(&i.ID, &i.Short, &i.Original); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

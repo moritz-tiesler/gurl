@@ -3,13 +3,11 @@ package main
 import (
 	"context"
 	_ "embed"
-	"fmt"
 	"log"
 	"net/http"
-	"reflect"
-	"sync"
 	"time"
 
+	"gurl/handlers"
 	"gurl/repository"
 	"gurl/repository/tutorial"
 
@@ -19,105 +17,41 @@ import (
 //go:embed schema.sql
 var ddl string
 
-type URLRepo interface {
+type Server struct {
+	*http.Server
 	*tutorial.Queries
 }
 
-func run() error {
-	ctx := context.Background()
-
-	queries, err := repository.New(ctx, "./gurl.db", ddl)
-	if err != nil {
-		return err
-	}
-	// list all authors
-	urls, err := queries.ListUrls(ctx)
-	if err != nil {
-		return err
-	}
-	log.Println(urls)
-
-	// create an author
-	insertedUrl, err := queries.CreateUrl(ctx, tutorial.CreateUrlParams{
-		Original: "https://www.zeit.de",
-		Short:    "gurl.me/abba",
-	})
-	if err != nil {
-		return err
-	}
-	log.Println(insertedUrl)
-
-	// get the author we just inserted
-	fetchedAuthor, err := queries.GetUrl(ctx, insertedUrl.ID)
-	if err != nil {
-		return err
-	}
-
-	// prints true
-	log.Println(reflect.DeepEqual(insertedUrl, fetchedAuthor))
-	return nil
-}
-
-func NewServer() *http.Server {
+func NewServer(h handlers.Handler) *http.Server {
 	router := http.NewServeMux()
 	router.Handle("/", http.FileServer(http.Dir("./static")))
 
-	router.HandleFunc("POST /url", postURL)
-	router.HandleFunc("GET /url", getURL)
+	router.HandleFunc("POST /url", h.PostURL)
+	router.HandleFunc("GET /url/{short}", h.GetURL)
 
 	stack := Stack(
 		LogRequestMiddleware(log.Printf),
 	)
 
-	server := &http.Server{
+	s := &http.Server{
 		Addr:    ":8080",
 		Handler: stack(router),
 	}
 
-	return server
-}
-
-var shortCounter int
-var counterMut sync.Mutex
-
-var m map[string]string = make(map[string]string)
-var mMut sync.RWMutex
-
-func postURL(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	longURL := r.Form.Get("long_url")
-	if longURL == "" {
-		http.Error(w, "Missing form data", http.StatusBadRequest)
-	}
-
-	counterMut.Lock()
-	shortURLKey := fmt.Sprintf("short%d", shortCounter)
-	shortCounter++
-	counterMut.Unlock()
-
-	mMut.Lock()
-	m[shortURLKey] = longURL
-	mMut.Unlock()
-
-	w.Write([]byte(fmt.Sprintf("localhost:8080/url/%s", shortURLKey)))
-}
-
-func getURL(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "https://www.zeit.de", http.StatusMovedPermanently)
+	return s
 }
 
 func main() {
-	// if err := run(); err != nil {
-	// 	log.Fatal(err)
+	ctx := context.Background()
 
-	// }
+	queries, err := repository.New(ctx, "./gurl.db", ddl)
+	if err != nil {
+		log.Fatalf("%s\n", err.Error())
+	}
 
-	s := NewServer()
+	handler := handlers.Handler{DB: queries}
+
+	s := NewServer(handler)
 
 	log.Printf("launching server at %v", s.Addr)
 	if err := s.ListenAndServe(); err != nil {
