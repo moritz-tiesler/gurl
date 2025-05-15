@@ -4,13 +4,8 @@
 
 package tutorial
 
-import (
-	"database/sql"
-)
-
-type Author struct {
+type Url struct {
 	ID       int64
-	Name     string
-	Bio      sql.NullString
-	Birthday sql.NullTime
+	Original string
+	Short    string
 }

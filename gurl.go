@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	_ "embed"
 	"log"
 	"reflect"
@@ -16,7 +15,7 @@ import (
 //go:embed schema.sql
 var ddl string
 
-type AuthorRepo interface {
+type URLRepo interface {
 	*tutorial.Queries
 }
 
@@ -28,30 +27,30 @@ func run() error {
 		return err
 	}
 	// list all authors
-	authors, err := queries.ListAuthors(ctx)
+	urls, err := queries.ListUrls(ctx)
 	if err != nil {
 		return err
 	}
-	log.Println(authors)
+	log.Println(urls)
 
 	// create an author
-	insertedAuthor, err := queries.CreateAuthor(ctx, tutorial.CreateAuthorParams{
-		Name: "Brian Kernighan",
-		Bio:  sql.NullString{String: "Co-author of The C Programming Language and The Go Programming Language", Valid: true},
+	insertedUrl, err := queries.CreateUrl(ctx, tutorial.CreateUrlParams{
+		Original: "https://www.zeit.de",
+		Short:    "gurl.me/abba",
 	})
 	if err != nil {
 		return err
 	}
-	log.Println(insertedAuthor)
+	log.Println(insertedUrl)
 
 	// get the author we just inserted
-	fetchedAuthor, err := queries.GetAuthor(ctx, insertedAuthor.ID)
+	fetchedAuthor, err := queries.GetUrl(ctx, insertedUrl.ID)
 	if err != nil {
 		return err
 	}
 
 	// prints true
-	log.Println(reflect.DeepEqual(insertedAuthor, fetchedAuthor))
+	log.Println(reflect.DeepEqual(insertedUrl, fetchedAuthor))
 	return nil
 }
 

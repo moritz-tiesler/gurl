@@ -1,26 +1,19 @@
--- name: GetAuthor :one
-SELECT * FROM authors
+-- name: GetUrl :one
+SELECT * FROM urls
 WHERE id = ? LIMIT 1;
 
--- name: ListAuthors :many
-SELECT * FROM authors
-ORDER BY name;
+-- name: ListUrls :many
+SELECT * FROM urls
+ORDER BY original;
 
--- name: CreateAuthor :one
-INSERT INTO authors (
-  name, bio, birthday
+-- name: CreateUrl :one
+INSERT INTO urls (
+  original, short
 ) VALUES (
-  ?, ?, ?
+  ?, ?
 )
 RETURNING *;
 
--- name: UpdateAuthor :exec
-UPDATE authors
-set name = ?,
-bio = ?,
-birthday = ?
-WHERE id = ?;
-
--- name: DeleteAuthor :exec
-DELETE FROM authors
+-- name: DeleteUrls :exec
+DELETE FROM urls
 WHERE id = ?;
