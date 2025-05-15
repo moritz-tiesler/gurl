@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	_ "embed"
+	"fmt"
 	"log"
 	"net/http"
 	"reflect"
+	"sync"
 	"time"
 
 	"gurl/repository"
@@ -58,6 +60,8 @@ func run() error {
 
 func NewServer() *http.Server {
 	router := http.NewServeMux()
+	router.Handle("/", http.FileServer(http.Dir("./static")))
+
 	router.HandleFunc("POST /url", postURL)
 	router.HandleFunc("GET /url", getURL)
 
@@ -71,6 +75,55 @@ func NewServer() *http.Server {
 	}
 
 	return server
+}
+
+var shortCounter int
+var counterMut sync.Mutex
+
+var m map[string]string = make(map[string]string)
+var mMut sync.RWMutex
+
+func postURL(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	longURL := r.Form.Get("long_url")
+	if longURL == "" {
+		http.Error(w, "Missing form data", http.StatusBadRequest)
+	}
+
+	counterMut.Lock()
+	shortURLKey := fmt.Sprintf("short%d", shortCounter)
+	shortCounter++
+	counterMut.Unlock()
+
+	mMut.Lock()
+	m[shortURLKey] = longURL
+	mMut.Unlock()
+
+	w.Write([]byte(fmt.Sprintf("localhost:8080/url/%s", shortURLKey)))
+}
+
+func getURL(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "https://www.zeit.de", http.StatusMovedPermanently)
+}
+
+func main() {
+	// if err := run(); err != nil {
+	// 	log.Fatal(err)
+
+	// }
+
+	s := NewServer()
+
+	log.Printf("launching server at %v", s.Addr)
+	if err := s.ListenAndServe(); err != nil {
+		log.Fatalf("Could not launch server")
+	}
+
 }
 
 type middleware func(http.Handler) http.Handler
@@ -93,27 +146,4 @@ func LogRequestMiddleware(loggingFunc func(string, ...any)) middleware {
 			next.ServeHTTP(w, r)
 		})
 	}
-}
-
-func postURL(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("gurl.com/url/short"))
-}
-
-func getURL(w http.ResponseWriter, r *http.Request) {
-	http.Redirect(w, r, "https://www.zeit.de", http.StatusMovedPermanently)
-}
-
-func main() {
-	// if err := run(); err != nil {
-	// 	log.Fatal(err)
-
-	// }
-
-	s := NewServer()
-
-	log.Printf("launching server at %v", s.Addr)
-	if err := s.ListenAndServe(); err != nil {
-		log.Fatalf("Could not launch server")
-	}
-
 }

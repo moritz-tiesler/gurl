@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/htmx.org@2.0.4"
+        integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+"
+        crossorigin="anonymous"></script>
+    <style>
+        /* Optional: Some basic styling */
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+    <title>URL Shortener</title>
+</head>
+
+<body>
+    <h1>Shorten Your URL</h1>
+
+    <form hx-post="http://localhost:8080/url" hx-target="#result">
+        <label for="long_url">Enter the long URL:</label><br>
+        <input type="text" id="long_url" name="long_url" size="50" required><br><br>
+        <input type="submit" value="Shorten URL">
+    </form>
+
+    <div id="result">
+        <!-- The shortened URL could be displayed here after submission -->
+    </div>
+    <button id="copyButton" style="display: inline-block;">Copy</button>
+    <script>
+        // Optional: You could add JavaScript here to handle the form submission
+        // asynchronously (using fetch or XMLHttpRequest) and display the result
+        // without a full page reload. For this simple example, a standard form submit is fine.response
+        const resultDiv = document.getElementById('result');
+        const copyButton = document.getElementById('copyButton');
+        copyButton.addEventListener('click', async () => {
+            const textToCopy = resultDiv.textContent;
+
+            try {
+                await navigator.clipboard.writeText(textToCopy);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                // Optional: Provide user feedback that copying failed
+                alert('Failed to copy URL.');
+            }
+        });
+    </script>
+</body>
+
+</html>
