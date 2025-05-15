@@ -7,29 +7,23 @@ import (
 	"log"
 	"reflect"
 
-	"gurl/tutorial"
+	"gurl/repository"
+	"gurl/repository/tutorial"
 
 	_ "modernc.org/sqlite"
 )
 
-//go:embed schema.sql
-var ddl string
+type AuthorRepo interface {
+	*tutorial.Queries
+}
 
 func run() error {
 	ctx := context.Background()
 
-	db, err := sql.Open("sqlite", ":memory:")
+	queries, err := repository.New(ctx, "./gurl.db")
 	if err != nil {
 		return err
 	}
-
-	// create tables
-	if _, err := db.ExecContext(ctx, ddl); err != nil {
-		return err
-	}
-
-	queries := tutorial.New(db)
-
 	// list all authors
 	authors, err := queries.ListAuthors(ctx)
 	if err != nil {
