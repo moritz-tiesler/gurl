@@ -1,22 +1,56 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"gurl/repository/tutorial"
 	"net/http"
 	"net/url"
 	"sync"
+
+	"github.com/pingcap/log"
 )
 
+type Entry struct {
+	value tutorial.Url
+}
+
+type Cache struct {
+	sync.RWMutex
+	data map[string]Entry
+}
+
+func (c *Cache) Set(key string, value tutorial.Url) {
+	c.Lock()
+	defer c.Unlock()
+
+	c.data[key] = Entry{value}
+}
+
+func (c *Cache) Get(key string) (tutorial.Url, bool) {
+	c.RLock()
+	defer c.RUnlock()
+	e, ok := c.data[key]
+	return e.value, ok
+}
+
+var c *Cache = &Cache{data: make(map[string]Entry)}
+
 type Handler struct {
-	DB *tutorial.Queries
+	DB    *tutorial.Queries
+	Cache *Cache
+}
+
+func New(q *tutorial.Queries) *Handler {
+	return &Handler{
+		DB:    q,
+		Cache: c,
+	}
 }
 
 var shortCounter int
 var counterMut sync.Mutex
-
-var m map[string]string = make(map[string]string)
-var mMut sync.RWMutex
 
 func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
@@ -51,11 +85,27 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
+	var url tutorial.Url
+	var err error
+
 	short := r.PathValue("short")
-	long, err := h.DB.GetUrlByShortUrl(r.Context(), short)
+	url, ok := h.Cache.Get(short)
+	if ok {
+		http.Redirect(w, r, url.Original, http.StatusFound)
+		return
+	}
+
+	url, err = h.DB.GetUrlByShortUrl(r.Context(), short)
 	if err != nil {
+		log.Error(err.Error())
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, long.Original, http.StatusMovedPermanently)
+	h.Cache.Set(short, url)
+	http.Redirect(w, r, url.Original, http.StatusFound)
+	return
 }

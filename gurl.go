@@ -22,7 +22,7 @@ type Server struct {
 	*tutorial.Queries
 }
 
-func NewServer(h handlers.Handler) *http.Server {
+func NewServer(h *handlers.Handler) *http.Server {
 	router := http.NewServeMux()
 	router.Handle("/", http.FileServer(http.Dir("./static")))
 
@@ -49,7 +49,7 @@ func main() {
 		log.Fatalf("%s\n", err.Error())
 	}
 
-	handler := handlers.Handler{DB: queries}
+	handler := handlers.New(queries)
 
 	s := NewServer(handler)
 
