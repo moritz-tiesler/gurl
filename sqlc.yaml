@@ -6,4 +6,4 @@ sql:
     gen:
       go:
         package: "tutorial"
-        out: "tutorial"
+        out: "repository/tutorial"

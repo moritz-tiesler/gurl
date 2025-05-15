@@ -12,22 +12,28 @@ import (
 
 const createAuthor = `-- name: CreateAuthor :one
 INSERT INTO authors (
-  name, bio
+  name, bio, birthday
 ) VALUES (
-  ?, ?
+  ?, ?, ?
 )
-RETURNING id, name, bio
+RETURNING id, name, bio, birthday
 `
 
 type CreateAuthorParams struct {
-	Name string
-	Bio  sql.NullString
+	Name     string
+	Bio      sql.NullString
+	Birthday sql.NullTime
 }
 
 func (q *Queries) CreateAuthor(ctx context.Context, arg CreateAuthorParams) (Author, error) {
-	row := q.db.QueryRowContext(ctx, createAuthor, arg.Name, arg.Bio)
+	row := q.db.QueryRowContext(ctx, createAuthor, arg.Name, arg.Bio, arg.Birthday)
 	var i Author
-	err := row.Scan(&i.ID, &i.Name, &i.Bio)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Bio,
+		&i.Birthday,
+	)
 	return i, err
 }
 
@@ -42,19 +48,24 @@ func (q *Queries) DeleteAuthor(ctx context.Context, id int64) error {
 }
 
 const getAuthor = `-- name: GetAuthor :one
-SELECT id, name, bio FROM authors
+SELECT id, name, bio, birthday FROM authors
 WHERE id = ? LIMIT 1
 `
 
 func (q *Queries) GetAuthor(ctx context.Context, id int64) (Author, error) {
 	row := q.db.QueryRowContext(ctx, getAuthor, id)
 	var i Author
-	err := row.Scan(&i.ID, &i.Name, &i.Bio)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Bio,
+		&i.Birthday,
+	)
 	return i, err
 }
 
 const listAuthors = `-- name: ListAuthors :many
-SELECT id, name, bio FROM authors
+SELECT id, name, bio, birthday FROM authors
 ORDER BY name
 `
 
@@ -67,7 +78,12 @@ func (q *Queries) ListAuthors(ctx context.Context) ([]Author, error) {
 	var items []Author
 	for rows.Next() {
 		var i Author
-		if err := rows.Scan(&i.ID, &i.Name, &i.Bio); err != nil {
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Bio,
+			&i.Birthday,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -84,17 +100,24 @@ func (q *Queries) ListAuthors(ctx context.Context) ([]Author, error) {
 const updateAuthor = `-- name: UpdateAuthor :exec
 UPDATE authors
 set name = ?,
-bio = ?
+bio = ?,
+birthday = ?
 WHERE id = ?
 `
 
 type UpdateAuthorParams struct {
-	Name string
-	Bio  sql.NullString
-	ID   int64
+	Name     string
+	Bio      sql.NullString
+	Birthday sql.NullTime
+	ID       int64
 }
 
 func (q *Queries) UpdateAuthor(ctx context.Context, arg UpdateAuthorParams) error {
-	_, err := q.db.ExecContext(ctx, updateAuthor, arg.Name, arg.Bio, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateAuthor,
+		arg.Name,
+		arg.Bio,
+		arg.Birthday,
+		arg.ID,
+	)
 	return err
 }

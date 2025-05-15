@@ -8,16 +8,17 @@ ORDER BY name;
 
 -- name: CreateAuthor :one
 INSERT INTO authors (
-  name, bio
+  name, bio, birthday
 ) VALUES (
-  ?, ?
+  ?, ?, ?
 )
 RETURNING *;
 
 -- name: UpdateAuthor :exec
 UPDATE authors
 set name = ?,
-bio = ?
+bio = ?,
+birthday = ?
 WHERE id = ?;
 
 -- name: DeleteAuthor :exec

@@ -13,6 +13,9 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+//go:embed schema.sql
+var ddl string
+
 type AuthorRepo interface {
 	*tutorial.Queries
 }
@@ -20,7 +23,7 @@ type AuthorRepo interface {
 func run() error {
 	ctx := context.Background()
 
-	queries, err := repository.New(ctx, "./gurl.db")
+	queries, err := repository.New(ctx, "./gurl.db", ddl)
 	if err != nil {
 		return err
 	}

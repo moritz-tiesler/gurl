@@ -2,6 +2,8 @@ module gurl
 
 go 1.24.2
 
+require modernc.org/sqlite v1.37.0
+
 require (
 	cel.dev/expr v0.19.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
@@ -53,7 +55,6 @@ require (
 	modernc.org/libc v1.62.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.9.1 // indirect
-	modernc.org/sqlite v1.37.0 // indirect
 )
 
 tool github.com/sqlc-dev/sqlc/cmd/sqlc

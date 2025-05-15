@@ -7,17 +7,14 @@ import (
 	"gurl/repository/tutorial"
 )
 
-//go:embed tutorial/schema.sql
-var ddl string
-
-func New(ctx context.Context, connString string) (*tutorial.Queries, error) {
+func New(ctx context.Context, connString string, schema string) (*tutorial.Queries, error) {
 
 	db, err := sql.Open("sqlite", connString)
 	if err != nil {
 		return nil, err
 	}
 	// create tables
-	if _, err := db.ExecContext(ctx, ddl); err != nil {
+	if _, err := db.ExecContext(ctx, schema); err != nil {
 		return nil, err
 	}
 
