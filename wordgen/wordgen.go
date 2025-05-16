@@ -31,12 +31,12 @@ type NameGen struct {
 
 func (n *NameGen) Generate() string {
 	n.Lock()
-	defer n.Unlock()
-	n.count++
 	high := n.count >> 24
 	highMid := n.count >> 16 & 0xFF
 	lowMid := n.count >> 8 & 0xFF
 	low := n.count & 0xFF
+	n.count++
+	n.Unlock()
 
 	var b strings.Builder
 	b.Grow(4)

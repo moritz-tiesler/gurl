@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gurl/repository/tutorial"
+	"gurl/wordgen"
 	"net/http"
 	"net/url"
 	"sync"
@@ -38,19 +39,18 @@ func (c *Cache) Get(key string) (tutorial.Url, bool) {
 var c *Cache = &Cache{data: make(map[string]Entry)}
 
 type Handler struct {
-	DB    *tutorial.Queries
-	Cache *Cache
+	DB        *tutorial.Queries
+	Cache     *Cache
+	Generator wordgen.NameGen
 }
 
 func New(q *tutorial.Queries) *Handler {
 	return &Handler{
-		DB:    q,
-		Cache: c,
+		DB:        q,
+		Cache:     c,
+		Generator: *wordgen.New(),
 	}
 }
-
-var shortCounter int
-var counterMut sync.Mutex
 
 func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
@@ -68,10 +68,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing form data", http.StatusBadRequest)
 	}
 
-	counterMut.Lock()
-	shortURLKey := fmt.Sprintf("short%d", shortCounter)
-	shortCounter++
-	counterMut.Unlock()
+	shortURLKey := h.Generator.Generate()
 	_, err = h.DB.CreateUrl(r.Context(), tutorial.CreateUrlParams{
 		Original: longURL,
 		Short:    shortURLKey,
