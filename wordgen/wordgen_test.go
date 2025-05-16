@@ -23,6 +23,6 @@ func TestLoad(t *testing.T) {
 
 func TestGenerate(t *testing.T) {
 	wg := New()
-	id := wg.Generate()
+	id := wg.Generate(1)
 	t.Log(id)
 }

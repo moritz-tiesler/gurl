@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"math/rand"
 	"strings"
-	"sync"
 )
 
 //go:embed first.json
@@ -21,22 +20,17 @@ var verbs []byte
 var personalNouns []byte
 
 type NameGen struct {
-	sync.Mutex
-	count     int32
 	firsts    []string
 	lasts     []string
 	verbs     []string
 	personals []string
 }
 
-func (n *NameGen) Generate() string {
-	n.Lock()
-	high := n.count >> 24
-	highMid := n.count >> 16 & 0xFF
-	lowMid := n.count >> 8 & 0xFF
-	low := n.count & 0xFF
-	n.count++
-	n.Unlock()
+func (n *NameGen) Generate(id int32) string {
+	high := id >> 24
+	highMid := id >> 16 & 0xFF
+	lowMid := id >> 8 & 0xFF
+	low := id & 0xFF
 
 	var b strings.Builder
 	b.Grow(4)

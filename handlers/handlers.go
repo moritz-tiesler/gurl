@@ -68,10 +68,14 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing form data", http.StatusBadRequest)
 	}
 
-	shortURLKey := h.Generator.Generate()
-	_, err = h.DB.CreateUrl(r.Context(), tutorial.CreateUrlParams{
+	entry, err := h.DB.CreateUrl(r.Context(), tutorial.CreateUrlParams{
 		Original: longURL,
-		Short:    shortURLKey,
+		Short:    "",
+	})
+	shortURLKey := h.Generator.Generate(int32(entry.ID))
+	h.DB.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
+		Short: shortURLKey,
+		ID:    entry.ID,
 	})
 
 	if err != nil {

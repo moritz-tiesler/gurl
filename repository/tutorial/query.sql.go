@@ -91,3 +91,19 @@ func (q *Queries) ListUrls(ctx context.Context) ([]Url, error) {
 	}
 	return items, nil
 }
+
+const updateUrl = `-- name: UpdateUrl :exec
+UPDATE urls
+  set short = ?
+WHERE id = ?
+`
+
+type UpdateUrlParams struct {
+	Short string
+	ID    int64
+}
+
+func (q *Queries) UpdateUrl(ctx context.Context, arg UpdateUrlParams) error {
+	_, err := q.db.ExecContext(ctx, updateUrl, arg.Short, arg.ID)
+	return err
+}

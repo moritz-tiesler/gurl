@@ -18,6 +18,11 @@ INSERT INTO urls (
 )
 RETURNING *;
 
+-- name: UpdateUrl :exec
+UPDATE urls
+  set short = ?
+WHERE id = ?;
+
 -- name: DeleteUrls :exec
 DELETE FROM urls
 WHERE id = ?;
