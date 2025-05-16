@@ -82,7 +82,12 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.Write(fmt.Appendf(nil, "https://www.%s/url/%s", r.Host, shortURLKey))
+	url := ""
+	if r.TLS != nil {
+		url += "https://"
+	}
+	url += "%s/url/%s"
+	w.Write(fmt.Appendf(nil, url, r.Host, shortURLKey))
 }
 
 func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
@@ -108,5 +113,4 @@ func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
 	}
 	h.Cache.Set(short, url)
 	http.Redirect(w, r, url.Original, http.StatusFound)
-	return
 }
