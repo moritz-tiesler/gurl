@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -39,14 +40,20 @@ func (c *Cache) Get(key string) (tutorial.Url, bool) {
 var c *Cache = &Cache{data: make(map[string]Entry)}
 
 type Handler struct {
-	DB        *tutorial.Queries
+	Repo      Repo
 	Cache     *Cache
 	Generator wordgen.NameGen
 }
 
-func New(q *tutorial.Queries) *Handler {
+type Repo interface {
+	CreateUrl(context.Context, tutorial.CreateUrlParams) (tutorial.Url, error)
+	GetUrlByShortUrl(ctx context.Context, short string) (tutorial.Url, error)
+	UpdateUrl(ctx context.Context, arg tutorial.UpdateUrlParams) error
+}
+
+func New(repo Repo) *Handler {
 	return &Handler{
-		DB:        q,
+		Repo:      repo,
 		Cache:     c,
 		Generator: *wordgen.New(),
 	}
@@ -68,12 +75,12 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Missing form data", http.StatusBadRequest)
 	}
 
-	entry, err := h.DB.CreateUrl(r.Context(), tutorial.CreateUrlParams{
+	entry, err := h.Repo.CreateUrl(r.Context(), tutorial.CreateUrlParams{
 		Original: longURL,
 		Short:    "",
 	})
 	shortURLKey := h.Generator.Generate(int32(entry.ID))
-	h.DB.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
+	h.Repo.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
 		Short: shortURLKey,
 		ID:    entry.ID,
 	})
@@ -101,7 +108,7 @@ func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err = h.DB.GetUrlByShortUrl(r.Context(), short)
+	url, err = h.Repo.GetUrlByShortUrl(r.Context(), short)
 	if err != nil {
 		log.Error(err.Error())
 		if errors.Is(err, sql.ErrNoRows) {
