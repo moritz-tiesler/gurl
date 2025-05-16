@@ -20,7 +20,7 @@
 <body>
     <h1>Shorten Your URL</h1>
 
-    <form hx-post="http://localhost:8080/url" hx-target="#result">
+    <form hx-post="/url" hx-target="#result">
         <label for="long_url">Enter the long URL:</label><br>
         <input type="text" id="long_url" name="long_url" size="50" required><br><br>
         <input type="submit" value="Shorten URL">
