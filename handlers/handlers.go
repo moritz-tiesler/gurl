@@ -82,7 +82,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	w.Write(fmt.Appendf(nil, "%s/url/%s", r.URL.Host, shortURLKey))
+	w.Write(fmt.Appendf(nil, "%s/url/%s", r.Host, shortURLKey))
 }
 
 func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
