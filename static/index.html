@@ -44,6 +44,7 @@
                 const text = inputField.textContent;
                 navigator.clipboard.writeText(text);
                 inputField.textContent = "Copied!";
+                setTimeout(() => inputField.textContent = text, 700);
             });
         });
     </script>
