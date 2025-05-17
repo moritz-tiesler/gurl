@@ -5,44 +5,19 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"gurl/lru_cache"
 	"gurl/repository/tutorial"
 	"gurl/wordgen"
 	"net/http"
 	"net/url"
-	"sync"
 
 	"github.com/pingcap/log"
 )
 
-type Entry struct {
-	value tutorial.Url
-}
-
-type Cache struct {
-	sync.RWMutex
-	data map[string]Entry
-}
-
-func (c *Cache) Set(key string, value tutorial.Url) {
-	c.Lock()
-	defer c.Unlock()
-
-	c.data[key] = Entry{value}
-}
-
-func (c *Cache) Get(key string) (tutorial.Url, bool) {
-	c.RLock()
-	defer c.RUnlock()
-	e, ok := c.data[key]
-	return e.value, ok
-}
-
-var c *Cache = &Cache{data: make(map[string]Entry)}
-
 type Handler struct {
 	Repo      Repo
-	Cache     *Cache
-	Generator wordgen.NameGen
+	Cache     *lru_cache.Cache[string, tutorial.Url]
+	Generator *wordgen.NameGen
 }
 
 type Repo interface {
@@ -54,8 +29,8 @@ type Repo interface {
 func New(repo Repo) *Handler {
 	return &Handler{
 		Repo:      repo,
-		Cache:     c,
-		Generator: *wordgen.New(),
+		Cache:     lru_cache.New[string, tutorial.Url](1024),
+		Generator: wordgen.New(),
 	}
 }
 
@@ -69,31 +44,41 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	longURL := r.Form.Get("long_url")
 	if longURL == "" {
 		http.Error(w, "Missing form data", http.StatusBadRequest)
+		return
 	}
+
 	_, err = url.ParseRequestURI(longURL)
 	if err != nil {
 		http.Error(w, "Missing form data", http.StatusBadRequest)
+		return
 	}
 
 	entry, err := h.Repo.CreateUrl(r.Context(), tutorial.CreateUrlParams{
 		Original: longURL,
 		Short:    "",
 	})
-	shortURLKey := h.Generator.Generate(int32(entry.ID))
-	h.Repo.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
-		Short: shortURLKey,
-		ID:    entry.ID,
-	})
-
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	shortURLKey := h.Generator.Generate(int32(entry.ID))
+	err = h.Repo.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
+		Short: shortURLKey,
+		ID:    entry.ID,
+	})
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	h.Cache.Add(shortURLKey, entry)
+
 	url := ""
 	if r.TLS != nil {
 		url += "https://"
 	}
 	url += "%s/url/%s"
+
 	w.Write(fmt.Appendf(nil, url, r.Host, shortURLKey))
 }
 
@@ -118,6 +103,6 @@ func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	h.Cache.Set(short, url)
+	h.Cache.Add(short, url)
 	http.Redirect(w, r, url.Original, http.StatusFound)
 }
