@@ -37,15 +37,17 @@ func (c *Cache[K, V]) Add(key K, value V) {
 	c.Lock()
 	defer c.Unlock()
 
-	if ent, ok := c.data[key]; ok {
-		c.evictList.MoveToFront(ent.lp)
+	if cacheEntry, ok := c.data[key]; ok {
+		c.evictList.MoveToFront(cacheEntry.lp)
+		cacheEntry.value = value
+		return
 	}
 
 	listEntry := ListEntry[K, V]{key, value}
 	cacheEntry := &CacheEntry[V]{value: value}
 
-	ent := c.evictList.PushFront(listEntry)
-	cacheEntry.lp = ent
+	lp := c.evictList.PushFront(listEntry)
+	cacheEntry.lp = lp
 	c.data[key] = cacheEntry
 
 	if c.evictList.Len() > c.size {

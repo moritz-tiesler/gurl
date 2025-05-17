@@ -45,9 +45,19 @@ func TestAddWithEvict(t *testing.T) {
 	testLenghts(t, c, 2)
 
 	testKeys(t, c)
+
+	c.Add("c", "z")
+
+	v, ok := c.Get("c")
+	if !ok {
+		t.Errorf("asdfasd")
+	}
+	if v != "z" {
+		t.Errorf("wrong val for key=c")
+	}
 }
 
-func TestGetPresent(t *testing.T) {
+func TestGetKeyPresent(t *testing.T) {
 
 	type testdata struct {
 		key string
