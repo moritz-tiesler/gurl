@@ -20,7 +20,7 @@
 <body>
     <h1>Shorten Your URL</h1>
 
-    <form hx-post="/url" hx-target="#url-result">
+    <form hx-post="/url" hx-swap="outerHTML" hx-target="#url-result">
         <label for="long_url">Enter the long URL:</label>
         <input type="text" id="long_url" name="long_url" required>
         <button type="submit">Shorten URL</button>
@@ -28,23 +28,22 @@
 
     <!-- The shortened URL could be displayed here after submission -->
     <div class="copy-link">
-        <div id="url-result" class="copy-link-input"></div>
+        <!-- <div id="url-result" class="copy-link-input"></div> -->
+        <input id="url-result" class="copy-link-input" type="text" value="" readonly>
         <button class="copy-link-button">
             <span class="material-icons">content_copy</span>
         </button>
     </div>
     <script>
         document.querySelectorAll(".copy-link").forEach((copyLinkParent) => {
-            const inputField = copyLinkParent.querySelector(".copy-link-input");
             const copyButton = copyLinkParent.querySelector(".copy-link-button");
-
-            inputField.addEventListener("focus", () => inputField.select());
-
             copyButton.addEventListener("click", () => {
-                const text = inputField.textContent;
+                const inputField = copyLinkParent.querySelector(".copy-link-input");
+                inputField.addEventListener("focus", () => inputField.select());
+                const text = inputField.value;
                 navigator.clipboard.writeText(text);
-                inputField.textContent = "Copied!";
-                setTimeout(() => inputField.textContent = text, 700);
+                inputField.value = "Copied!";
+                setTimeout(() => inputField.value = text, 700);
             });
         });
     </script>

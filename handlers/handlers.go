@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"gurl/lru_cache"
 	"gurl/repository/tutorial"
+	"gurl/templates"
 	"gurl/wordgen"
 	"net/http"
 	"net/url"
@@ -77,9 +78,14 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	if r.TLS != nil {
 		url += "https://"
 	}
-	url += "%s/url/%s"
+	url += fmt.Sprintf("%s/url/%s", r.Host, shortURLKey)
 
-	w.Write(fmt.Appendf(nil, url, r.Host, shortURLKey))
+	t := templates.URL{Value: url}
+	html := t.Render()
+
+	// TODO: answer with html input element, makes for nicer styling
+	// use templating
+	w.Write(html)
 }
 
 func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {

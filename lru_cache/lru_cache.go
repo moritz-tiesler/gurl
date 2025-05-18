@@ -5,9 +5,6 @@ import (
 	"sync"
 )
 
-// TODO: make this an lru cache
-// use this for evict list https://pkg.go.dev/container/list
-
 type CacheEntry[V any] struct {
 	value V
 	lp    *list.Element
