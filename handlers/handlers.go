@@ -11,6 +11,7 @@ import (
 	"gurl/wordgen"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/pingcap/log"
 )
@@ -75,7 +76,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	h.Cache.Add(shortURLKey, entry)
 
 	url := ""
-	if r.TLS != nil {
+	if !strings.HasPrefix(r.Host, "localhost") {
 		url += "https://"
 	}
 	url += fmt.Sprintf("%s/url/%s", r.Host, shortURLKey)
