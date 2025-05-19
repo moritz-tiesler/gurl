@@ -39,7 +39,8 @@ func New(repo Repo) *Handler {
 func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Error(err.Error())
+		http.Error(w, "invalid form", http.StatusInternalServerError)
 		return
 	}
 
@@ -49,8 +50,10 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO move url validity check to JS
 	_, err = url.ParseRequestURI(longURL)
 	if err != nil {
+		log.Error(err.Error())
 		http.Error(w, "Missing form data", http.StatusBadRequest)
 		return
 	}
@@ -60,6 +63,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		Short:    "",
 	})
 	if err != nil {
+		log.Error(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -70,6 +74,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		ID:    entry.ID,
 	})
 	if err != nil {
+		log.Error(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

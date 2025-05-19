@@ -5,9 +5,7 @@ import (
 	"html/template"
 )
 
-var templateString string = `
-    <input id="url-result" class="copy-link-input" type="text" value={{ .Value }} readonly>
-`
+var templateString string = `<input id="url-result" class="copy-link-input" type="text" value={{ .Value }} readonly>`
 
 type URL struct {
 	Value string

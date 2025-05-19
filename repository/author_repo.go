@@ -10,6 +10,7 @@ import (
 func New(ctx context.Context, connString string, schema string) (*tutorial.Queries, error) {
 
 	db, err := sql.Open("sqlite", connString)
+	db.SetMaxOpenConns(1)
 	if err != nil {
 		return nil, err
 	}
