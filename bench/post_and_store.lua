@@ -36,7 +36,7 @@ end
 
 
 done = function(summary, latency, requests)
-    local fname = "bench/test_urls.text"
+    local fname = "bench/test_urls.txt"
     local file = io.open(fname, "w")
     if file then
         for index, thread in ipairs(threads) do

@@ -9,11 +9,10 @@ import (
 	"gurl/repository/tutorial"
 	"gurl/templates"
 	"gurl/wordgen"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
-
-	"github.com/pingcap/log"
 )
 
 type Handler struct {
@@ -31,7 +30,7 @@ type Repo interface {
 func New(repo Repo) *Handler {
 	return &Handler{
 		Repo:      repo,
-		Cache:     lru_cache.New[string, tutorial.Url](1024),
+		Cache:     lru_cache.New[string, tutorial.Url](1024 * 8),
 		Generator: wordgen.New(),
 	}
 }
@@ -39,7 +38,7 @@ func New(repo Repo) *Handler {
 func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		log.Error(err.Error())
+		log.Printf("%s\n", err.Error())
 		http.Error(w, "invalid form", http.StatusInternalServerError)
 		return
 	}
@@ -53,7 +52,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	// TODO move url validity check to JS
 	_, err = url.ParseRequestURI(longURL)
 	if err != nil {
-		log.Error(err.Error())
+		log.Printf("%s\n", err.Error())
 		http.Error(w, "Missing form data", http.StatusBadRequest)
 		return
 	}
@@ -63,7 +62,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		Short:    "",
 	})
 	if err != nil {
-		log.Error(err.Error())
+		log.Printf("%s\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -74,11 +73,11 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		ID:    entry.ID,
 	})
 	if err != nil {
-		log.Error(err.Error())
+		log.Printf("%s\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	h.Cache.Add(shortURLKey, entry)
+	// h.Cache.Add(shortURLKey, entry)
 
 	url := ""
 	if !strings.HasPrefix(r.Host, "localhost") {
@@ -99,15 +98,17 @@ func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	short := r.PathValue("short")
+	log.Printf("requested=%s\n", short)
 	url, ok := h.Cache.Get(short)
 	if ok {
+		log.Printf("cache hit=%s\n", url.Original)
 		http.Redirect(w, r, url.Original, http.StatusFound)
 		return
 	}
 
 	url, err = h.Repo.GetUrlByShortUrl(r.Context(), short)
 	if err != nil {
-		log.Error(err.Error())
+		log.Printf("%s\n", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -115,6 +116,7 @@ func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	log.Printf("db hit=%s\n", url.Original)
 	h.Cache.Add(short, url)
 	http.Redirect(w, r, url.Original, http.StatusFound)
 }
