@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS urls;
+
 CREATE TABLE IF NOT EXISTS urls (
     id INTEGER PRIMARY KEY,
     short text NOT NULL,
