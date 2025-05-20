@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"gurl/lru_cache"
+	"gurl/repository"
 	"gurl/repository/tutorial"
 	"gurl/templates"
 	"gurl/wordgen"
@@ -16,18 +16,12 @@ import (
 )
 
 type Handler struct {
-	Repo      Repo
+	Repo      repository.Repo
 	Cache     *lru_cache.Cache[string, tutorial.Url]
 	Generator *wordgen.NameGen
 }
 
-type Repo interface {
-	CreateUrl(context.Context, tutorial.CreateUrlParams) (tutorial.Url, error)
-	GetUrlByShortUrl(ctx context.Context, short string) (tutorial.Url, error)
-	UpdateUrl(ctx context.Context, arg tutorial.UpdateUrlParams) error
-}
-
-func New(repo Repo) *Handler {
+func New(repo repository.Repo) *Handler {
 	return &Handler{
 		Repo:      repo,
 		Cache:     lru_cache.New[string, tutorial.Url](1024 * 8),
@@ -57,18 +51,28 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entry, err := h.Repo.CreateUrl(r.Context(), tutorial.CreateUrlParams{
-		Original: longURL,
-		Short:    "",
-	})
+	tx, err := h.Repo.DB().BeginTx(r.Context(), nil)
 	if err != nil {
 		log.Printf("%s\n", err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	defer tx.Rollback()
+	qtx := h.Repo.WithTx(tx)
+
+	entry, err := qtx.CreateUrl(r.Context(), tutorial.CreateUrlParams{
+		Original: longURL,
+		Short:    "",
+	})
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("%s\n", err.Error())
+		return
+	}
 
 	shortURLKey := h.Generator.Generate(int32(entry.ID))
-	err = h.Repo.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
+	err = qtx.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
 		Short: shortURLKey,
 		ID:    entry.ID,
 	})
@@ -77,7 +81,11 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	// h.Cache.Add(shortURLKey, entry)
+	err = tx.Commit()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("%s\n", err.Error())
+	}
 
 	url := ""
 	if !strings.HasPrefix(r.Host, "localhost") {
@@ -88,8 +96,6 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	t := templates.URL{Value: url}
 	html := t.Render()
 
-	// TODO: answer with html input element, makes for nicer styling
-	// use templating
 	w.Write(html)
 }
 

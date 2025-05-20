@@ -26,6 +26,7 @@ func NewServer(h *handlers.Handler) *http.Server {
 	router := http.NewServeMux()
 	router.Handle("/", http.FileServer(http.Dir("./static")))
 
+	// TODO: wrap handlers and centralize error handling in wrapper
 	router.HandleFunc("POST /url", h.PostURL)
 	router.HandleFunc("GET /url/{short}", h.GetURL)
 
@@ -44,12 +45,12 @@ func NewServer(h *handlers.Handler) *http.Server {
 func main() {
 	ctx := context.Background()
 
-	queries, err := repository.New(ctx, "./gurl.db", ddl)
+	urlRepo, err := repository.New(ctx, "./gurl.db", ddl)
+
 	if err != nil {
 		log.Fatalf("%s\n", err.Error())
 	}
-
-	handler := handlers.New(queries)
+	handler := handlers.New(urlRepo)
 
 	s := NewServer(handler)
 

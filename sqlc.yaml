@@ -7,3 +7,4 @@ sql:
       go:
         package: "tutorial"
         out: "repository/tutorial"
+        emit_interface: true
