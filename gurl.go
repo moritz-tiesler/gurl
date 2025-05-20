@@ -9,7 +9,6 @@ import (
 
 	"gurl/handlers"
 	"gurl/repository"
-	"gurl/repository/tutorial"
 
 	_ "modernc.org/sqlite"
 )
@@ -19,7 +18,6 @@ var ddl string
 
 type Server struct {
 	*http.Server
-	*tutorial.Queries
 }
 
 func NewServer(h *handlers.Handler) *http.Server {

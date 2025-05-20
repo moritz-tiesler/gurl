@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"gurl/lru_cache"
 	"gurl/repository"
-	"gurl/repository/tutorial"
+	urlRepo "gurl/repository/url"
 	"gurl/templates"
 	"gurl/wordgen"
 	"log"
@@ -17,14 +17,14 @@ import (
 
 type Handler struct {
 	Repo      repository.Repo
-	Cache     *lru_cache.Cache[string, tutorial.Url]
+	Cache     *lru_cache.Cache[string, urlRepo.Url]
 	Generator *wordgen.NameGen
 }
 
 func New(repo repository.Repo) *Handler {
 	return &Handler{
 		Repo:      repo,
-		Cache:     lru_cache.New[string, tutorial.Url](1024 * 8),
+		Cache:     lru_cache.New[string, urlRepo.Url](1024 * 8),
 		Generator: wordgen.New(),
 	}
 }
@@ -60,7 +60,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 	qtx := h.Repo.WithTx(tx)
 
-	entry, err := qtx.CreateUrl(r.Context(), tutorial.CreateUrlParams{
+	entry, err := qtx.CreateUrl(r.Context(), urlRepo.CreateUrlParams{
 		Original: longURL,
 		Short:    "",
 	})
@@ -72,7 +72,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortURLKey := h.Generator.Generate(int32(entry.ID))
-	err = qtx.UpdateUrl(r.Context(), tutorial.UpdateUrlParams{
+	err = qtx.UpdateUrl(r.Context(), urlRepo.UpdateUrlParams{
 		Short: shortURLKey,
 		ID:    entry.ID,
 	})
@@ -100,7 +100,7 @@ func (h *Handler) PostURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetURL(w http.ResponseWriter, r *http.Request) {
-	var url tutorial.Url
+	var url urlRepo.Url
 	var err error
 
 	short := r.PathValue("short")

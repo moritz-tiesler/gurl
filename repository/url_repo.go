@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	"gurl/repository/tutorial"
+	tutorial "gurl/repository/url"
 	"log"
 )
 

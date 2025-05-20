@@ -5,6 +5,6 @@ sql:
     schema: "schema.sql"
     gen:
       go:
-        package: "tutorial"
-        out: "repository/tutorial"
+        package: "url"
+        out: "repository/url"
         emit_interface: true
