@@ -59,8 +59,8 @@ func New() *NameGen {
 }
 
 func shuffle(xs []string) {
-	rand.New(rand.NewSource(55))
-	rand.Shuffle(len(xs), func(i, j int) {
+	r := rand.New(rand.NewSource(55))
+	r.Shuffle(len(xs), func(i, j int) {
 		xs[i], xs[j] = xs[j], xs[i]
 	})
 }
