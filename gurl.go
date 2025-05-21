@@ -25,8 +25,8 @@ func NewServer(h *handlers.Handler) *http.Server {
 	router.Handle("/", http.FileServer(http.Dir("./static")))
 
 	// TODO: wrap handlers and centralize error handling in wrapper
-	router.HandleFunc("POST /url", h.PostURL)
-	router.HandleFunc("GET /url/{short}", h.GetURL)
+	router.HandleFunc("POST /url", h.PostURL())
+	router.HandleFunc("GET /url/{short}", h.GetURL())
 
 	stack := Stack(
 		LogRequestMiddleware(log.Printf),
