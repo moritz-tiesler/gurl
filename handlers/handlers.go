@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -61,33 +62,37 @@ func (h *Handler) postURL(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("cannot parse url: %w", ErrRequestData)
 	}
 
-	tx, err := h.Repo.DB().BeginTx(r.Context(), nil)
-	if err != nil {
-		return fmt.Errorf("BeginTx() %s: %w", err, ErrDatabase)
-	}
-	defer tx.Rollback()
-	qtx := h.Repo.WithTx(tx)
+	// tx, err := h.Repo.DB().BeginTx(r.Context(), nil)
+	// if err != nil {
+	// 	return fmt.Errorf("BeginTx() %s: %w", err, ErrDatabase)
+	// }
+	// defer tx.Rollback()
+	// qtx := h.Repo.WithTx(tx)
 
-	entry, err := qtx.CreateUrl(r.Context(), urlRepo.CreateUrlParams{
-		Original: longURL,
-		Short:    "",
-	})
+	// entry, err := qtx.CreateUrl(r.Context(), urlRepo.CreateUrlParams{
+	// 	Original: longURL,
+	// 	Short:    "",
+	// })
 
-	if err != nil {
-		return fmt.Errorf("CreateUrl() %s: %w", err, ErrDatabase)
-	}
+	// if err != nil {
+	// 	return fmt.Errorf("CreateUrl() %s: %w", err, ErrDatabase)
+	// }
 
-	shortURLKey := h.Generator.Generate(int32(entry.ID))
-	err = qtx.UpdateUrl(r.Context(), urlRepo.UpdateUrlParams{
-		Short: shortURLKey,
-		ID:    entry.ID,
-	})
+	// shortURLKey := h.Generator.Generate(int32(entry.ID))
+	// err = qtx.UpdateUrl(r.Context(), urlRepo.UpdateUrlParams{
+	// 	Short: shortURLKey,
+	// 	ID:    entry.ID,
+	// })
+	// if err != nil {
+	// 	return fmt.Errorf("UpdateUrl() %s: %w", err, ErrDatabase)
+	// }
+	// err = tx.Commit()
+	// if err != nil {
+	// 	return fmt.Errorf("Commit() %s: %w", err, ErrDatabase)
+	// }
+	shortURLKey, err := h.createURL(r.Context(), longURL)
 	if err != nil {
-		return fmt.Errorf("UpdateUrl() %s: %w", err, ErrDatabase)
-	}
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("Commit() %s: %w", err, ErrDatabase)
+		return fmt.Errorf("error calling createURL(): %s: %w", err, ErrDatabase)
 	}
 
 	url := ""
@@ -147,4 +152,38 @@ func MakeHandler(h func(w http.ResponseWriter, r *http.Request) error) func(w ht
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}
+}
+
+func (h *Handler) createURL(ctx context.Context, longURL string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+	tx, err := h.Repo.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return "", fmt.Errorf("BeginTx() %s: %w", err, ErrDatabase)
+	}
+	defer tx.Rollback()
+	qtx := h.Repo.WithTx(tx)
+
+	entry, err := qtx.CreateUrl(ctx, urlRepo.CreateUrlParams{
+		Original: longURL,
+		Short:    "",
+	})
+
+	if err != nil {
+		return "", fmt.Errorf("CreateUrl() %s: %w", err, ErrDatabase)
+	}
+
+	shortURLKey := h.Generator.Generate(int32(entry.ID))
+	err = qtx.UpdateUrl(ctx, urlRepo.UpdateUrlParams{
+		Short: shortURLKey,
+		ID:    entry.ID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("UpdateUrl() %s: %w", err, ErrDatabase)
+	}
+	err = tx.Commit()
+	if err != nil {
+		return "", fmt.Errorf("Commit() %s: %w", err, ErrDatabase)
+	}
+	return shortURLKey, nil
 }
