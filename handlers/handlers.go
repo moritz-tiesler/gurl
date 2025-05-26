@@ -63,7 +63,7 @@ func (h *Handler) postURL(w http.ResponseWriter, r *http.Request) error {
 
 	tx, err := h.Repo.DB().BeginTx(r.Context(), nil)
 	if err != nil {
-		return fmt.Errorf("%s: %w", err, ErrDatabase)
+		return fmt.Errorf("BeginTx() %s: %w", err, ErrDatabase)
 	}
 	defer tx.Rollback()
 	qtx := h.Repo.WithTx(tx)
@@ -74,7 +74,7 @@ func (h *Handler) postURL(w http.ResponseWriter, r *http.Request) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("%s: %w", err, ErrDatabase)
+		return fmt.Errorf("CreateUrl() %s: %w", err, ErrDatabase)
 	}
 
 	shortURLKey := h.Generator.Generate(int32(entry.ID))
@@ -83,11 +83,11 @@ func (h *Handler) postURL(w http.ResponseWriter, r *http.Request) error {
 		ID:    entry.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("%s: %w", err, ErrDatabase)
+		return fmt.Errorf("UpdateUrl() %s: %w", err, ErrDatabase)
 	}
 	err = tx.Commit()
 	if err != nil {
-		return fmt.Errorf("%s: %w", err, ErrDatabase)
+		return fmt.Errorf("Commit() %s: %w", err, ErrDatabase)
 	}
 
 	url := ""
