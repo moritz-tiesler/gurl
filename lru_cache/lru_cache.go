@@ -53,8 +53,8 @@ func (c *Cache[K, V]) Add(key K, value V) {
 }
 
 func (c *Cache[K, V]) Get(key K) (V, bool) {
-	c.RLock()
-	defer c.RUnlock()
+	c.Lock()
+	defer c.Unlock()
 	var v V
 	entry, ok := c.data[key]
 	if ok {
