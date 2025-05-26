@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"gurl/lru_cache"
-	"gurl/repository"
 	urlRepo "gurl/repository/url"
 	"gurl/templates"
 	"gurl/wordgen"
@@ -18,14 +17,16 @@ import (
 )
 
 type Handler struct {
-	Repo      repository.Repo
+	Repo      *urlRepo.Queries
+	DB        *sql.DB
 	Cache     *lru_cache.Cache[string, urlRepo.Url]
 	Generator *wordgen.NameGen
 }
 
-func New(repo repository.Repo) *Handler {
+func New(repo *urlRepo.Queries, db *sql.DB) *Handler {
 	return &Handler{
 		Repo:      repo,
+		DB:        db,
 		Cache:     lru_cache.New[string, urlRepo.Url](1024 * 8),
 		Generator: wordgen.New(),
 	}
@@ -157,7 +158,7 @@ func MakeHandler(h func(w http.ResponseWriter, r *http.Request) error) func(w ht
 func (h *Handler) createURL(ctx context.Context, longURL string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	tx, err := h.Repo.DB().BeginTx(ctx, nil)
+	tx, err := h.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return "", fmt.Errorf("BeginTx() %s: %w", err, ErrDatabase)
 	}

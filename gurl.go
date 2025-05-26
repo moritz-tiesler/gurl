@@ -2,13 +2,15 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	_ "embed"
 	"log"
 	"net/http"
 	"time"
 
 	"gurl/handlers"
-	"gurl/repository"
+
+	"gurl/repository/url"
 
 	_ "modernc.org/sqlite"
 )
@@ -31,13 +33,29 @@ func NewServer(mw middleware, mux *http.ServeMux) *http.Server {
 func main() {
 	ctx := context.Background()
 
-	urlRepo, err := repository.New(ctx, "./gurl.db", ddl)
+	db, err := sql.Open("sqlite", "./gurl.db")
+	if err != nil {
+		log.Fatal("Could not opn db connection")
+	}
+
+	_, err = db.Exec("PRAGMA journal_mode=WAL;")
+	if err != nil {
+		log.Fatalf("Failed to set journal_mode: %v", err)
+	}
+
+	db.SetMaxOpenConns(1)
+
+	if _, err := db.ExecContext(ctx, ddl); err != nil {
+		log.Fatal("Could not create scheme")
+	}
 
 	if err != nil {
 		log.Fatalf("%s\n", err.Error())
 	}
 
-	handler := handlers.New(urlRepo)
+	queries := url.New(db)
+	handler := handlers.New(queries, db)
+
 	router := http.NewServeMux()
 	setupRoutes(handler, router)
 
