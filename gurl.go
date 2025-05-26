@@ -20,23 +20,11 @@ type Server struct {
 	*http.Server
 }
 
-func NewServer(h *handlers.Handler) *http.Server {
-	router := http.NewServeMux()
-	router.Handle("/", http.FileServer(http.Dir("./static")))
-
-	// TODO: wrap handlers and centralize error handling in wrapper
-	router.HandleFunc("POST /url", h.PostURL())
-	router.HandleFunc("GET /url/{short}", h.GetURL())
-
-	stack := Stack(
-		LogRequestMiddleware(log.Printf),
-	)
-
+func NewServer(mw middleware, mux *http.ServeMux) *http.Server {
 	s := &http.Server{
 		Addr:    ":8080",
-		Handler: stack(router),
+		Handler: mw(mux),
 	}
-
 	return s
 }
 
@@ -48,15 +36,28 @@ func main() {
 	if err != nil {
 		log.Fatalf("%s\n", err.Error())
 	}
-	handler := handlers.New(urlRepo)
 
-	s := NewServer(handler)
+	handler := handlers.New(urlRepo)
+	router := http.NewServeMux()
+	setupRoutes(handler, router)
+
+	middlewareStack := Stack(
+		LogRequestMiddleware(log.Printf),
+	)
+
+	s := NewServer(middlewareStack, router)
 
 	log.Printf("launching server at %v", s.Addr)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatalf("Could not launch server")
 	}
 
+}
+func setupRoutes(h *handlers.Handler, router *http.ServeMux) {
+	router.Handle("/", http.FileServer(http.Dir("./static")))
+
+	router.HandleFunc("POST /url", h.PostURL())
+	router.HandleFunc("GET /url/{short}", h.GetURL())
 }
 
 type middleware func(http.Handler) http.Handler
