@@ -63,37 +63,9 @@ func (h *Handler) postURL(w http.ResponseWriter, r *http.Request) error {
 		return fmt.Errorf("cannot parse url: %w", ErrRequestData)
 	}
 
-	// tx, err := h.Repo.DB().BeginTx(r.Context(), nil)
-	// if err != nil {
-	// 	return fmt.Errorf("BeginTx() %s: %w", err, ErrDatabase)
-	// }
-	// defer tx.Rollback()
-	// qtx := h.Repo.WithTx(tx)
-
-	// entry, err := qtx.CreateUrl(r.Context(), urlRepo.CreateUrlParams{
-	// 	Original: longURL,
-	// 	Short:    "",
-	// })
-
-	// if err != nil {
-	// 	return fmt.Errorf("CreateUrl() %s: %w", err, ErrDatabase)
-	// }
-
-	// shortURLKey := h.Generator.Generate(int32(entry.ID))
-	// err = qtx.UpdateUrl(r.Context(), urlRepo.UpdateUrlParams{
-	// 	Short: shortURLKey,
-	// 	ID:    entry.ID,
-	// })
-	// if err != nil {
-	// 	return fmt.Errorf("UpdateUrl() %s: %w", err, ErrDatabase)
-	// }
-	// err = tx.Commit()
-	// if err != nil {
-	// 	return fmt.Errorf("Commit() %s: %w", err, ErrDatabase)
-	// }
-	shortURLKey, err := h.createURL(r.Context(), longURL)
+	shortURLKey, err := h.saveURL(r.Context(), longURL)
 	if err != nil {
-		return fmt.Errorf("error calling createURL(): %s: %w", err, ErrDatabase)
+		return fmt.Errorf("error calling saveURL(): %s: %w", err, ErrDatabase)
 	}
 
 	url := ""
@@ -143,24 +115,22 @@ func MakeHandler(h func(w http.ResponseWriter, r *http.Request) error) func(w ht
 		if err != nil {
 			log.Printf("%v: LOG %s - %s %s %s %s\n", time.Now(), r.RemoteAddr, r.Proto, r.Method, r.URL, err)
 			if errors.Is(err, ErrNotFound) {
-				w.WriteHeader(http.StatusNotFound)
+				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 				return
 			}
 			if errors.Is(err, ErrRequestData) {
-				w.WriteHeader(http.StatusBadRequest)
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 				return
 			}
-			w.WriteHeader(http.StatusInternalServerError)
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		}
 	}
 }
 
-func (h *Handler) createURL(ctx context.Context, longURL string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-	defer cancel()
+func (h *Handler) saveURL(ctx context.Context, longURL string) (string, error) {
 	tx, err := h.DB.BeginTx(ctx, nil)
 	if err != nil {
-		return "", fmt.Errorf("BeginTx() %s: %w", err, ErrDatabase)
+		return "", fmt.Errorf("BeginTx() %s", err)
 	}
 	defer tx.Rollback()
 	qtx := h.Repo.WithTx(tx)
@@ -171,7 +141,7 @@ func (h *Handler) createURL(ctx context.Context, longURL string) (string, error)
 	})
 
 	if err != nil {
-		return "", fmt.Errorf("CreateUrl() %s: %w", err, ErrDatabase)
+		return "", fmt.Errorf("CreateUrl() %s", err)
 	}
 
 	shortURLKey := h.Generator.Generate(int32(entry.ID))
@@ -180,11 +150,11 @@ func (h *Handler) createURL(ctx context.Context, longURL string) (string, error)
 		ID:    entry.ID,
 	})
 	if err != nil {
-		return "", fmt.Errorf("UpdateUrl() %s: %w", err, ErrDatabase)
+		return "", fmt.Errorf("UpdateUrl() %s", err)
 	}
 	err = tx.Commit()
 	if err != nil {
-		return "", fmt.Errorf("Commit() %s: %w", err, ErrDatabase)
+		return "", fmt.Errorf("Commit() %s", err)
 	}
 	return shortURLKey, nil
 }
