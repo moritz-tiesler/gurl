@@ -46,11 +46,7 @@ func main() {
 	db.SetMaxOpenConns(1)
 
 	if _, err := db.ExecContext(ctx, ddl); err != nil {
-		log.Fatal("Could not create scheme")
-	}
-
-	if err != nil {
-		log.Fatalf("%s\n", err.Error())
+		log.Fatalf("Could not create scheme: %s", err)
 	}
 
 	queries := url.New(db)
@@ -60,7 +56,7 @@ func main() {
 	setupRoutes(handler, router)
 
 	middlewareStack := Stack(
-		LogRequestMiddleware(log.Printf),
+	// LogRequestMiddleware(log.Printf),
 	)
 
 	s := NewServer(middlewareStack, router)
