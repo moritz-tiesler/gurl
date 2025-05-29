@@ -56,7 +56,7 @@ func main() {
 	setupRoutes(handler, router)
 
 	middlewareStack := Stack(
-	// LogRequestMiddleware(log.Printf),
+		LogRequestMiddleware(log.Printf),
 	)
 
 	s := NewServer(middlewareStack, router)
@@ -86,12 +86,24 @@ func Stack(middlewares ...middleware) middleware {
 	}
 }
 
+type wrappedWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (ww *wrappedWriter) WriteHeader(statusCode int) {
+	ww.ResponseWriter.WriteHeader(statusCode)
+	ww.statusCode = statusCode
+}
+
 func LogRequestMiddleware(loggingFunc func(string, ...any)) middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			loggingFunc("%v: LOG %s - %s %s %s\n", time.Now(), r.RemoteAddr, r.Proto, r.Method, r.URL)
 
-			next.ServeHTTP(w, r)
+			wrapped := &wrappedWriter{w, 200}
+			next.ServeHTTP(wrapped, r)
+			loggingFunc("STATUS: %v", wrapped.statusCode)
 		})
 	}
 }
