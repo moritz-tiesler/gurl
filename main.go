@@ -101,7 +101,7 @@ func LogRequestMiddleware(loggingFunc func(string, ...any)) middleware {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			loggingFunc("%v: LOG %s - %s %s %s\n", time.Now(), r.RemoteAddr, r.Proto, r.Method, r.URL)
 
-			wrapped := &wrappedWriter{w, 200}
+			wrapped := &wrappedWriter{w, http.StatusOK}
 			next.ServeHTTP(wrapped, r)
 			loggingFunc("STATUS: %v", wrapped.statusCode)
 		})
